@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mortgage Refinance Calculator</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --primary:#2563eb;
+  --success:#16a34a;
+  --danger:#dc2626;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#e5e7eb;
+  --radius:16px;
+  --shadow:0 20px 40px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Arial;
+  background:var(--bg);
+  color:var(--text);
+}
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:20px;
+}
+h1{
+  text-align:center;
+  color:var(--primary);
+  margin-bottom:24px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1.4fr;
+  gap:24px;
+}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+}
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px;
+}
+label{
+  font-size:14px;
+  margin-top:14px;
+  display:block;
+}
+input,select{
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-size:15px;
+}
+button{
+  width:100%;
+  padding:14px;
+  margin-top:16px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  cursor:pointer;
+}
+.primary-btn{
+  background:var(--primary);
+  color:#fff;
+}
+.secondary-btn{
+  background:#eef2ff;
+  color:var(--primary);
+}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+}
+@media(max-width:900px){
+  .stats{grid-template-columns:1fr 1fr}
+}
+.stat{
+  background:#f8fafc;
+  padding:14px;
+  border-radius:12px;
+  text-align:center;
+}
+.stat h3{
+  margin:0;
+  font-size:20px;
+  color:var(--primary);
+}
+.stat p{
+  margin:4px 0 0;
+  font-size:13px;
+  color:var(--muted);
+}
+.good{color:var(--success)}
+.bad{color:var(--danger)}
+canvas{margin-top:24px}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+  margin-top:20px;
+}
+th,td{
+  border:1px solid var(--border);
+  padding:8px;
+  text-align:right;
+}
+th{
+  background:#f1f5f9;
+  text-align:center;
+}
+td:first-child,th:first-child{text-align:center}
+@media print{
+  body *{visibility:hidden}
+  #printArea, #printArea *{visibility:visible}
+  #printArea{position:absolute;left:0;top:0;width:100%}
+  button{display:none}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>Mortgage Refinance Calculator</h1>
+
+<div class="grid">
+
+<!-- INPUT -->
+<div class="card">
+<h3>Current Loan</h3>
+
+<label>Current Loan Balance</label>
+<input id="oldBalance" value="280000">
+
+<label>Current Interest Rate (%)</label>
+<input id="oldRate" value="7.25">
+
+<label>Remaining Term (Years)</label>
+<input id="oldYears" value="25">
+
+<hr style="margin:20px 0">
+
+<h3>New Refinance Loan</h3>
+
+<label>New Interest Rate (%)</label>
+<input id="newRate" value="5.75">
+
+<label>New Loan Term (Years)</label>
+<input id="newYears" value="25">
+
+<label>Refinance Closing Costs</label>
+<input id="costs" value="6000">
+
+<label>Currency</label>
+<select id="currency">
+  <option value="$">USD ($)</option>
+  <option value="€">EUR (€)</option>
+  <option value="£">GBP (£)</option>
+  <option value="₹">INR (₹)</option>
+  <option value="C$">CAD (C$)</option>
+  <option value="A$">AUD (A$)</option>
+</select>
+
+<button class="primary-btn" onclick="calculate()">Calculate Refinance</button>
+<button class="secondary-btn" onclick="clearAll()">Clear</button>
+</div>
+
+<!-- OUTPUT -->
+<div class="card" id="printArea">
+
+<div class="stats">
+  <div class="stat">
+    <h3 id="oldEmi">—</h3>
+    <p>Current Monthly Payment</p>
+  </div>
+  <div class="stat">
+    <h3 id="newEmi">—</h3>
+    <p>New Monthly Payment</p>
+  </div>
+  <div class="stat">
+    <h3 id="monthlySave">—</h3>
+    <p>Monthly Savings</p>
+  </div>
+  <div class="stat">
+    <h3 id="breakEven">—</h3>
+    <p>Break-Even (Months)</p>
+  </div>
+</div>
+
+<div class="stats" style="margin-top:14px">
+  <div class="stat">
+    <h3 id="oldInterest">—</h3>
+    <p>Remaining Interest (Current)</p>
+  </div>
+  <div class="stat">
+    <h3 id="newInterest">—</h3>
+    <p>Total Interest (New)</p>
+  </div>
+  <div class="stat">
+    <h3 id="lifetimeSave">—</h3>
+    <p>Lifetime Interest Savings</p>
+  </div>
+  <div class="stat">
+    <h3 id="decision">—</h3>
+    <p>Refinance Decision</p>
+  </div>
+</div>
+
+<canvas id="compareChart"></canvas>
+
+<h3 style="margin-top:24px">Loan Comparison Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Loan</th>
+<th>Monthly Payment</th>
+<th>Total Interest</th>
+<th>Total Cost</th>
+</tr>
+</thead>
+<tbody id="summaryTable"></tbody>
+</table>
+
+<button class="secondary-btn" onclick="window.print()">Print Report</button>
+
+</div>
+
+</div>
+</div>
+
+<script>
+let chart;
+
+function fmt(v){
+  let c=document.getElementById("currency").value;
+  return c+Number(v).toLocaleString(undefined,{maximumFractionDigits:0});
+}
+
+function emiCalc(P,r,n){
+  return P*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
+}
+
+function calculate(){
+  const bal=+oldBalance.value;
+  const oldR=+oldRate.value/100/12;
+  const oldN=+oldYears.value*12;
+
+  const newR=+newRate.value/100/12;
+  const newN=+newYears.value*12;
+  const cost=+costs.value;
+
+  const oldEmiVal=emiCalc(bal,oldR,oldN);
+  const newEmiVal=emiCalc(bal,newR,newN);
+
+  const oldInterest=(oldEmiVal*oldN)-bal;
+  const newInterest=(newEmiVal*newN)-bal;
+
+  const monthlySaving=oldEmiVal-newEmiVal;
+  const lifetimeSaving=oldInterest-newInterest-cost;
+  const breakEvenMonths=monthlySaving>0?Math.ceil(cost/monthlySaving):0;
+
+  oldEmi.innerText=fmt(oldEmiVal);
+  newEmi.innerText=fmt(newEmiVal);
+  monthlySave.innerText=fmt(monthlySaving);
+  breakEven.innerText=breakEvenMonths>0?breakEvenMonths+" months":"—";
+
+  oldInterestElem=oldInterest;
+  newInterestElem=newInterest;
+
+  oldInterestElem=fmt(oldInterest);
+  newInterestElem=fmt(newInterest);
+
+  oldInterest.innerText=fmt(oldInterest);
+  newInterest.innerText=fmt(newInterest);
+
+  lifetimeSave.innerText=fmt(lifetimeSaving);
+
+  decision.innerHTML=lifetimeSaving>0
+    ?"<span class='good'>Good to Refinance</span>"
+    :"<span class='bad'>Not Beneficial</span>";
+
+  summaryTable.innerHTML=`
+    <tr>
+      <td>Current Loan</td>
+      <td>${fmt(oldEmiVal)}</td>
+      <td>${fmt(oldInterest)}</td>
+      <td>${fmt(oldInterest+bal)}</td>
+    </tr>
+    <tr>
+      <td>New Loan</td>
+      <td>${fmt(newEmiVal)}</td>
+      <td>${fmt(newInterest)}</td>
+      <td>${fmt(newInterest+bal+cost)}</td>
+    </tr>`;
+
+  if(chart)chart.destroy();
+  chart=new Chart(compareChart,{
+    type:"bar",
+    data:{
+      labels:["Current Loan","Refinanced Loan"],
+      datasets:[
+        {label:"Monthly Payment",data:[oldEmiVal,newEmiVal]},
+        {label:"Total Interest",data:[oldInterest,newInterest]}
+      ]
+    }
+  });
+}
+
+function clearAll(){
+  document.querySelectorAll("input").forEach(i=>i.value="");
+  document.querySelectorAll(".stat h3").forEach(e=>e.innerText="—");
+  if(chart)chart.destroy();
+  summaryTable.innerHTML="";
+}
+</script>
+</body>
+</html>
